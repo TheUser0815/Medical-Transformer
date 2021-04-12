@@ -390,6 +390,33 @@ class AxialBlock_wopos(nn.Module):
 
         return out
 
+class InitialBlockLayer(nn.Module):
+    def __init__(self, norm_layer, actv_layer, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'):
+        super(InitialBlockLayer, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
+        self.norm = norm_layer(out_channels)
+        self.actf = actv_layer()
+
+    def __call__(self, x):
+        ret = self.conv(x)
+        ret = self.norm(ret)
+        ret = self.actf(ret)
+        return ret
+
+
+class InitialBlock(nn.Module):
+    def __init__(self, norm_layer, actv_layer, l1_in_channels, l2_in_channels, l3_in_channels, out_channels):
+        super(InitialBlock, self).__init__()
+        self.Layer1 = InitialBlockLayer(norm_layer, actv_layer, l1_in_channels, l2_in_channels, kernel_size=7, stride=2, padding=3, bias=False)
+        self.Layer2 = InitialBlockLayer(norm_layer, actv_layer, l2_in_channels, l3_in_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.Layer3 = InitialBlockLayer(norm_layer, actv_layer, l3_in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+    
+    def __call__(self, x):
+        ret = self.Layer1(x)
+        ret = self.Layer2(ret)
+        ret = self.Layer3(ret)
+        return ret
+
 
 #end of block definition
 
@@ -413,14 +440,9 @@ class ResAxialAttentionUNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(imgchan, self.inplanes, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.conv2 = nn.Conv2d(self.inplanes, 128, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3 = nn.Conv2d(128, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = norm_layer(self.inplanes)
-        self.bn2 = norm_layer(128)
-        self.bn3 = norm_layer(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
+
+        self.initial_block = InitialBlock(norm_layer, lambda: nn.ReLU(inplace=True), imgchan, self.inplanes, 128, self.inplanes)
+
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, int(128 * s), layers[0], kernel_size= (img_size//2))
         self.layer2 = self._make_layer(block, int(256 * s), layers[1], stride=2, kernel_size=(img_size//2),
@@ -472,15 +494,7 @@ class ResAxialAttentionUNet(nn.Module):
         
         # AxialAttention Encoder
         # pdb.set_trace()
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.relu(x)
+        x = self.initial_block(x)
 
         x1 = self.layer1(x)
 
@@ -524,48 +538,25 @@ class medt_net(nn.Module):
             raise ValueError("replace_stride_with_dilation should be None "
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
+
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(imgchan, self.inplanes, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.conv2 = nn.Conv2d(self.inplanes, 128, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3 = nn.Conv2d(128, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = norm_layer(self.inplanes)
-        self.bn2 = norm_layer(128)
-        self.bn3 = norm_layer(self.inplanes)
-        # self.conv1 = nn.Conv2d(1, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = norm_layer(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
+
+        actv_layer = lambda: nn.ReLU(inplace=True)
+
+        self.global_initial_block = InitialBlock(norm_layer, actv_layer, imgchan, self.inplanes, 128, self.inplanes)
+
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, int(128 * s), layers[0], kernel_size= (img_size//2))
         self.layer2 = self._make_layer(block, int(256 * s), layers[1], stride=2, kernel_size=(img_size//2),
                                        dilate=replace_stride_with_dilation[0])
-        # self.layer3 = self._make_layer(block, int(512 * s), layers[2], stride=2, kernel_size=(img_size//4),
-        #                                dilate=replace_stride_with_dilation[1])
-        # self.layer4 = self._make_layer(block, int(1024 * s), layers[3], stride=2, kernel_size=(img_size//8),
-        #                                dilate=replace_stride_with_dilation[2])
-        
-        # Decoder
-        # self.decoder1 = nn.Conv2d(int(1024 *2*s)      ,        int(1024*2*s), kernel_size=3, stride=2, padding=1)
-        # self.decoder2 = nn.Conv2d(int(1024  *2*s)     , int(1024*s), kernel_size=3, stride=1, padding=1)
-        # self.decoder3 = nn.Conv2d(int(1024*s),  int(512*s), kernel_size=3, stride=1, padding=1)
+
         self.decoder4 = nn.Conv2d(int(512*s) ,  int(256*s), kernel_size=3, stride=1, padding=1)
         self.decoder5 = nn.Conv2d(int(256*s) , int(128*s) , kernel_size=3, stride=1, padding=1)
+
         self.adjust   = nn.Conv2d(int(128*s) , num_classes, kernel_size=1, stride=1, padding=0)
         self.soft     = nn.Softmax(dim=1)
 
-
-        self.conv1_p = nn.Conv2d(imgchan, self.inplanes, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.conv2_p = nn.Conv2d(self.inplanes,128, kernel_size=3, stride=1, padding=1,
-                               bias=False)
-        self.conv3_p = nn.Conv2d(128, self.inplanes, kernel_size=3, stride=1, padding=1,
-                               bias=False)
-        # self.conv1 = nn.Conv2d(1, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1_p = norm_layer(self.inplanes)
-        self.bn2_p = norm_layer(128)
-        self.bn3_p = norm_layer(self.inplanes)
-
-        self.relu_p = nn.ReLU(inplace=True)
+        self.local_initial_block = InitialBlock(norm_layer, actv_layer, imgchan, self.inplanes, 128, self.inplanes)
 
         img_size_p = img_size // 4
 
@@ -620,16 +611,8 @@ class medt_net(nn.Module):
     def _forward_impl(self, x):
 
         xin = x.clone()
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu(x)
-        x = self.conv3(x)
-        x = self.bn3(x)
-        # x = F.max_pool2d(x,2,2)
-        x = self.relu(x)
+
+        x = self.global_initial_block(x)
         
         # x = self.maxpool(x)
         # pdb.set_trace()
@@ -662,20 +645,9 @@ class medt_net(nn.Module):
             for j in range(0,4):
 
                 x_p = xin[:,:,32*i:32*(i+1),32*j:32*(j+1)]
-                # begin patch wise
-                x_p = self.conv1_p(x_p)
-                x_p = self.bn1_p(x_p)
-                # x = F.max_pool2d(x,2,2)
-                x_p = self.relu(x_p)
 
-                x_p = self.conv2_p(x_p)
-                x_p = self.bn2_p(x_p)
-                # x = F.max_pool2d(x,2,2)
-                x_p = self.relu(x_p)
-                x_p = self.conv3_p(x_p)
-                x_p = self.bn3_p(x_p)
-                # x = F.max_pool2d(x,2,2)
-                x_p = self.relu(x_p)
+                # begin patch wise
+                x_p = self.local_initial_block(x_p)
                 
                 # x = self.maxpool(x)
                 # pdb.set_trace()
