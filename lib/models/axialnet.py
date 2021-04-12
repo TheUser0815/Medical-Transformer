@@ -278,6 +278,7 @@ class AxialBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.kernel_size = kernel_size
 
     def forward(self, x):
         identity = x
@@ -320,6 +321,7 @@ class AxialBlock_dynamic(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.kernel_size = kernel_size
 
     def forward(self, x):
         identity = x
@@ -364,6 +366,7 @@ class AxialBlock_wopos(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+        self.kernel_size = kernel_size
 
     def forward(self, x):
         identity = x
