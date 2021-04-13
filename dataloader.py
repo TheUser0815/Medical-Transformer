@@ -88,12 +88,12 @@ class DSet(data.Dataset, FileCollector, ImageLoader):
         else:
             return img, gt
 
-    def getitem(self, index, img_loader):
+    def getitem(self, index):
         img_data = self.images[index]
 
         seed = np.random.randint(2147483647) # make a seed with numpy generator 
         
-        image = img_loader(os.path.join(self.base_dir, img_data[0], img_data[2]))
+        image = self.image_loader(os.path.join(self.base_dir, img_data[0], img_data[2]))
         
         random.seed(seed) # apply this seed to img tranfsorms
         torch.manual_seed(seed) # needed for torchvision 0.7
@@ -121,6 +121,34 @@ class DSet(data.Dataset, FileCollector, ImageLoader):
 
         return image, gt, img_data[2].replace("/", "_")
 
+    def __getitem__(self, index):
+        return super().getitem(index)
+
+    def __len__(self):
+        return self.size
+
+    def copy(self):
+        cpy = DSet(self.base_dir, self.trainsize, self.augmentations, self.class_channels)
+        cpy.image_loader = self.image_loader
+        cpy.images = self.images
+        cpy.size = self.size
+        return cpy
+
+    def split_dset(self, val_percentage):
+        val_count = int(len(self.images) * val_percentage)
+        np.random.shuffle(self.images)
+
+        val_set = self.copy()
+        val_set.images = self.images[:val_count]
+        val_set.size = len(val_set.images)
+
+        self.images = self.images[val_count:]
+        self.size = len(self.images)
+
+        return self, val_set
+        
+
+
 
 class MonochromeDataset(DSet):
     """
@@ -128,9 +156,10 @@ class MonochromeDataset(DSet):
     """
     def __init__(self, base_dir, trainsize, augmentations, class_channels=1):
         super().__init__(base_dir, trainsize, augmentations, class_channels)
+        self.image_loader = super().binary_loader
 
     def __getitem__(self, index):
-        return super().getitem(index, super().binary_loader)
+        return super().getitem(index)
 
     def __len__(self):
         return self.size
@@ -142,9 +171,10 @@ class PolychromeDataset(DSet):
     """
     def __init__(self, base_dir, trainsize, augmentations, class_channels=1):
         super().__init__(base_dir, trainsize, augmentations, class_channels)
+        self.image_loader = super().rgb_loader
 
     def __getitem__(self, index):
-        return super().getitem(index, super().rgb_loader)
+        return super().getitem(index)
 
     def __len__(self):
         return self.size

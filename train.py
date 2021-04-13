@@ -42,7 +42,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
 parser.add_argument('--weight-decay', '--wd', default=1e-5, type=float,
                     metavar='W', help='weight decay (default: 1e-5)')
 parser.add_argument('--train_dataset', required=True, type=str)
-parser.add_argument('--val_dataset', type=str)
+parser.add_argument('--val_dataset', type=str, default=None)
 parser.add_argument('--save_freq', type=int,default = 10)
 
 parser.add_argument('--modelname', default='MedT', type=str,
@@ -85,12 +85,14 @@ if args.crop is not None:
 else:
     crop = None
 
-    
-
 tf_train = ImageDataset(args.train_dataset, imgsize, augment, class_channels=args.outchannels)
 tf_train.add_data("img", "labelcol")
-tf_val = ImageDataset(args.val_dataset, imgsize, augment, class_channels=args.outchannels)
-tf_val.add_data("img", "labelcol")
+
+if args.val_dataset is None:
+    tf_train, tf_val = tf_train.split_dset(0.2)
+else:
+    tf_val = ImageDataset(args.val_dataset, imgsize, augment, class_channels=args.outchannels)
+    tf_val.add_data("img", "labelcol")
 
 dataloader = get_loader(tf_train, batch_size=args.batch_size, shuffle=True)
 valloader = get_loader(tf_val, batch_size=1, shuffle=True)
