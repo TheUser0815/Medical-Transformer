@@ -122,7 +122,7 @@ class DSet(data.Dataset, FileCollector, ImageLoader):
         return image, gt, img_data[2].replace("/", "_")
 
     def __getitem__(self, index):
-        return super().getitem(index)
+        return self.getitem(index)
 
     def __len__(self):
         return self.size
