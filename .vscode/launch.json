@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MedT Dataset",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--train_dataset", "/home/thomas/Pictures/unzipped/original/medT/train folder",
+                "--val_dataset", "/home/thomas/Pictures/unzipped/original/medT/validation folder",
+                "--direc", "/home/thomas/Pictures/unzipped/original/medT/train_results",
+                "--batch_size", "4",
+                "--epoch", "400",
+                "--save_freq", "10",
+                "--modelname", "MedT",
+                "--learning_rate", "0.001",
+                "--imgsize", "128",
+                "--gray", "no"
+            ]
+        },
+        {
+            "name": "Metal Dataset",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--train_dataset", "/home/thomas/Pictures/unzipped/modified/traingdata/medT",
+                "--val_dataset", "/home/thomas/Pictures/unzipped/modified/traingdata/medT/validation",
+                "--direc", "/home/thomas/Pictures/unzipped/modified/traingdata/medT_out",
+                "--batch_size", "1",
+                "--epoch", "400",
+                "--save_freq", "10",
+                "--modelname", "MedT",
+                "--learning_rate", "0.001",
+                "--imgsize", "512",
+                "--gray", "yes",
+                "--outchannels", "1"
+            ]
+        }
+    ]
+}
