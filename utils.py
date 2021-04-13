@@ -58,7 +58,7 @@ class JointTransform2D:
         long_mask: bool, if True, returns the mask as LongTensor in label-encoded format.
     """
     def __init__(self, crop=(32, 32), p_flip=0.5, color_jitter_params=(0.1, 0.1, 0.1, 0.1),
-                 p_random_affine=0, long_mask=False):
+                 p_random_affine=0, long_mask=False, img_size=None):
         self.crop = crop
         self.p_flip = p_flip
         self.color_jitter_params = color_jitter_params
