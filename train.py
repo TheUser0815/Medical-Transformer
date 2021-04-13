@@ -86,13 +86,13 @@ else:
     crop = None
 
 tf_train = ImageDataset(args.train_dataset, imgsize, augment, class_channels=args.outchannels)
-tf_train.add_data("img", "labelcol")
+tf_train.add_data("img", "mask")
 
 if args.val_dataset is None:
     tf_train, tf_val = tf_train.split_dset(0.2)
 else:
     tf_val = ImageDataset(args.val_dataset, imgsize, augment, class_channels=args.outchannels)
-    tf_val.add_data("img", "labelcol")
+    tf_val.add_data("img", "mask")
 
 dataloader = get_loader(tf_train, batch_size=args.batch_size, shuffle=True)
 valloader = get_loader(tf_val, batch_size=1, shuffle=True)
