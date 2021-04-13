@@ -61,7 +61,7 @@ parser.add_argument('--direc', default='./medt', type=str,
 parser.add_argument('--crop', type=int, default=None)
 parser.add_argument('--imgsize', type=int, default=None)
 parser.add_argument('--device', default='cuda', type=str)
-parser.add_argument('--gray', default='no', type=str)
+parser.add_argument('--gray', default='yes', type=str)
 
 args = parser.parse_args()
 gray_ = args.gray
@@ -82,9 +82,9 @@ if args.crop is not None:
 else:
     crop = None
 
-tf_train = JointTransform2D(crop=crop, p_flip=0.5, color_jitter_params=None, long_mask=True)
+tf_train = JointTransform2D(crop=crop, p_flip=0.5, color_jitter_params=None, long_mask=True, img_size=imgsize)
 tf_val = JointTransform2D(crop=crop, p_flip=0, color_jitter_params=None, long_mask=True)
-train_dataset = ImageToImage2D(args.train_dataset, tf_val)
+train_dataset = ImageToImage2D(args.train_dataset, tf_train)
 val_dataset = ImageToImage2D(args.val_dataset, tf_val)
 predict_dataset = Image2D(args.val_dataset)
 dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)

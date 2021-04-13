@@ -66,6 +66,12 @@ class JointTransform2D:
             self.color_tf = T.ColorJitter(*color_jitter_params)
         self.p_random_affine = p_random_affine
         self.long_mask = long_mask
+        if img_size is not None:
+            img_size = int(img_size)
+            self.img_shape = (img_size, img_size)
+        else:
+            self.img_shape = None
+
 
     def __call__(self, image, mask):
         # transforming to PIL image
@@ -87,6 +93,10 @@ class JointTransform2D:
         if np.random.rand() < self.p_random_affine:
             affine_params = T.RandomAffine(180).get_params((-90, 90), (1, 1), (2, 2), (-45, 45), self.crop)
             image, mask = F.affine(image, *affine_params), F.affine(mask, *affine_params)
+
+        if self.img_shape is not None:
+            image = image.resize(self.img_shape)
+            mask = mask.resize(self.img_shape)
 
         # transforming to tensor
         image = F.to_tensor(image)
