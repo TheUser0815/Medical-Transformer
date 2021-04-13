@@ -100,32 +100,26 @@ class DSet(data.Dataset, FileCollector, ImageLoader):
         image = self.transform(image)
 
         if self.class_channels > 2:
-            gt = []
+            gt = torch.zeros(image.shape[1:])
             for i in range(self.class_channels):
                 gti = self.binary_loader(os.path.join(self.base_dir, img_data[0], str(i), img_data[2]))
                 random.seed(seed) # apply this seed to img tranfsorms
                 torch.manual_seed(seed) # needed for torchvision 0.7
-                gti = self.transform(gti)
-                gt.append(gti)
-            gt = torch.stack(gt, 1)[0]
+                gti = self.transform(gti)[0]
+                gti *= i
+                gt += gti
         else:
             gt0 = self.binary_loader(os.path.join(self.base_dir, img_data[1], img_data[2]))
 
             random.seed(seed) # apply this seed to img tranfsorms
             torch.manual_seed(seed) # needed for torchvision 0.7
-            gt = self.transform(gt0)
+            gt = self.transform(gt0)[0]
 
-            if self.class_channels == 2:
-                gt1 = ImageOps.invert(gt0)
-
-                random.seed(seed) # apply this seed to img tranfsorms
-                torch.manual_seed(seed) # needed for torchvision 0.7
-                gt1 = self.transform(gt1)
-
-                gt = torch.stack([gt,gt1], 1)[0]
             
+        gt = torch.round(gt)
+        gt = gt.type(torch.LongTensor)
 
-        return image, gt
+        return image, gt, img_data[2].replace("/", "_")
 
 
 class MonochromeDataset(DSet):
