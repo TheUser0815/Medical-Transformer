@@ -19,9 +19,7 @@ import numpy as np
 from torchvision.utils import save_image
 import torch
 import torch.nn.init as init
-from utils import JointTransform2D, ImageToImage2D, Image2D
 from metrics import jaccard_index, f1_score, LogNLLLoss,classwise_f1
-from utils import chk_mkdir, Logger, MetricList
 import cv2
 from functools import partial
 from random import randint
@@ -95,7 +93,7 @@ tf_val = ImageDataset(args.val_dataset, imgsize, augment, class_channels=args.ou
 tf_val.add_data("img", "labelcol")
 
 dataloader = get_loader(tf_train, batch_size=args.batch_size, shuffle=True)
-valloader = get_loader(tf_val, batch_size=args.batch_size, shuffle=True)
+valloader = get_loader(tf_val, batch_size=1, shuffle=True)
 
 device = torch.device("cuda")
 
