@@ -26,6 +26,7 @@ import cv2
 from functools import partial
 from random import randint
 import timeit
+from dataloader import get_loader
 
 parser = argparse.ArgumentParser(description='MedT')
 parser.add_argument('-j', '--workers', default=16, type=int, metavar='N',
@@ -62,6 +63,8 @@ parser.add_argument('--crop', type=int, default=None)
 parser.add_argument('--imgsize', type=int, default=None)
 parser.add_argument('--device', default='cuda', type=str)
 parser.add_argument('--gray', default='yes', type=str)
+parser.add_argument('--augment', default='no', type=str)
+parser.add_argument('--outchannels', default=1, type=int)
 
 args = parser.parse_args()
 gray_ = args.gray
@@ -70,11 +73,13 @@ direc = args.direc
 modelname = args.modelname
 imgsize = args.imgsize
 
+augment = True if args.augment.lower() == "yes" else False
+
 if gray_ == "yes":
-    from utils_gray import JointTransform2D, ImageToImage2D, Image2D
+    from dataloader import MonochromeDataset as ImageDataset
     imgchant = 1
 else:
-    from utils import JointTransform2D, ImageToImage2D, Image2D
+    from dataloader import PolychromeDataset as ImageDataset
     imgchant = 3
 
 if args.crop is not None:
@@ -82,13 +87,15 @@ if args.crop is not None:
 else:
     crop = None
 
-tf_train = JointTransform2D(crop=crop, p_flip=0.5, color_jitter_params=None, long_mask=True, img_size=imgsize)
-tf_val = JointTransform2D(crop=crop, p_flip=0, color_jitter_params=None, long_mask=True, img_size=imgsize)
-train_dataset = ImageToImage2D(args.train_dataset, tf_train)
-val_dataset = ImageToImage2D(args.val_dataset, tf_val)
-predict_dataset = Image2D(args.val_dataset)
-dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-valloader = DataLoader(val_dataset, 1, shuffle=True)
+    
+
+tf_train = ImageDataset(args.train_dataset, imgsize, augment, class_channels=args.outchannels)
+tf_train.add_data("img", "labelcol")
+tf_val = ImageDataset(args.val_dataset, imgsize, augment, class_channels=args.outchannels)
+tf_val.add_data("img", "labelcol")
+
+dataloader = get_loader(tf_train, batch_size=args.batch_size, shuffle=True)
+valloader = get_loader(tf_val, batch_size=args.batch_size, shuffle=True)
 
 device = torch.device("cuda")
 
@@ -126,9 +133,12 @@ torch.cuda.manual_seed(seed)
 for epoch in range(args.epochs):
 
     epoch_running_loss = 0
+
+    batch_amount = len(dataloader)
     
     for batch_idx, (X_batch, y_batch, *rest) in enumerate(dataloader):        
         
+        print("epoch:", epoch, "batch: (", batch_idx, "/", batch_amount, ")")
         
 
         X_batch = Variable(X_batch.to(device ='cuda'))
