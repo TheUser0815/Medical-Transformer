@@ -83,7 +83,7 @@ else:
     crop = None
 
 tf_train = JointTransform2D(crop=crop, p_flip=0.5, color_jitter_params=None, long_mask=True, img_size=imgsize)
-tf_val = JointTransform2D(crop=crop, p_flip=0, color_jitter_params=None, long_mask=True)
+tf_val = JointTransform2D(crop=crop, p_flip=0, color_jitter_params=None, long_mask=True, img_size=imgsize)
 train_dataset = ImageToImage2D(args.train_dataset, tf_train)
 val_dataset = ImageToImage2D(args.val_dataset, tf_val)
 predict_dataset = Image2D(args.val_dataset)
