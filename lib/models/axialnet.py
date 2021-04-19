@@ -152,7 +152,8 @@ class AxialAttention_dynamic(nn.Module):
         q, k, v = torch.split(qkv.reshape(N * W, self.groups, self.group_planes * 2, H), [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=2)
 
         # Calculate position embedding
-        all_embeddings = torch.index_select(self.relative, 1, self.flatten_index).view(self.group_planes * 2, self.kernel_size, self.kernel_size)
+        flat_embedding = torch.index_select(self.relative, 1, self.flatten_index)
+        all_embeddings = flat_embedding.view(self.group_planes * 2, self.kernel_size, self.kernel_size)
         q_embedding, k_embedding, v_embedding = torch.split(all_embeddings, [self.group_planes // 2, self.group_planes // 2, self.group_planes], dim=0)
         qr = torch.einsum('bgci,cij->bgij', q, q_embedding)
         kr = torch.einsum('bgci,cij->bgij', k, k_embedding).transpose(2, 3)
@@ -557,7 +558,7 @@ class medt_net(nn.Module):
         self.decoder5 = nn.Conv2d(int(256*s) , int(128*s) , kernel_size=3, stride=1, padding=1)
 
         self.adjust   = nn.Conv2d(int(128*s) , num_classes, kernel_size=1, stride=1, padding=0)
-        self.soft     = nn.Softmax(dim=1)
+        self.soft     = nn.Softmax2d()
 
         self.local_initial_block = InitialBlock(norm_layer, actv_layer, imgchan, self.inplanes, 128, self.inplanes)
 
@@ -572,15 +573,15 @@ class medt_net(nn.Module):
                                        dilate=replace_stride_with_dilation[2])
         
         # Decoder
-        self.decoder1_p = nn.Conv2d(int(1024 *2*s)      ,        int(1024*2*s), kernel_size=3, stride=2, padding=1)
-        self.decoder2_p = nn.Conv2d(int(1024  *2*s)     , int(1024*s), kernel_size=3, stride=1, padding=1)
-        self.decoder3_p = nn.Conv2d(int(1024*s),  int(512*s), kernel_size=3, stride=1, padding=1)
-        self.decoder4_p = nn.Conv2d(int(512*s) ,  int(256*s), kernel_size=3, stride=1, padding=1)
+        self.decoder1_p = nn.Conv2d(int(2048*s), int(2048*s), kernel_size=3, stride=2, padding=1)
+        self.decoder2_p = nn.Conv2d(int(2048*s), int(1024*s), kernel_size=3, stride=1, padding=1)
+        self.decoder3_p = nn.Conv2d(int(1024*s), int(512*s) , kernel_size=3, stride=1, padding=1)
+        self.decoder4_p = nn.Conv2d(int(512*s) , int(256*s) , kernel_size=3, stride=1, padding=1)
         self.decoder5_p = nn.Conv2d(int(256*s) , int(128*s) , kernel_size=3, stride=1, padding=1)
 
         self.decoderf = nn.Conv2d(int(128*s) , int(128*s) , kernel_size=3, stride=1, padding=1)
-        self.adjust_p   = nn.Conv2d(int(128*s) , num_classes, kernel_size=1, stride=1, padding=0)
-        self.soft_p     = nn.Softmax(dim=1)
+        self.adjust_p = nn.Conv2d(int(128*s) , num_classes, kernel_size=1, stride=1, padding=0)
+        self.soft_p   = nn.Softmax2d()
 
 
     def _make_layer(self, block, planes, blocks, kernel_size=56, stride=1, dilate=False):
@@ -678,6 +679,8 @@ class medt_net(nn.Module):
         x = F.relu(self.decoderf(x))
         
         x = self.adjust(F.relu(x))
+
+        x = self.soft(x)
 
         # pdb.set_trace()
         return x
