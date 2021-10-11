@@ -1,3 +1,5 @@
+MOVED TO https://github.com/TheUser0815/Networks
+
 # Medical-Transformer
 
  <a href="https://arxiv.org/abs/2102.10662"> </a> 
